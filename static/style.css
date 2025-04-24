@@ -1,0 +1,304 @@
+/* General Styles */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #2d2d2d; /* Dark background */
+    color: #e0e0e0; /* Light text */
+    margin: 0;
+    padding: 20px;
+    line-height: 1.6;
+}
+
+/* Main container for horizontal layout */
+.main-container {
+    display: flex;
+    flex-wrap: wrap; /* Allow wrapping on smaller screens */
+    gap: 20px; /* Space between cards */
+    justify-content: center; /* Center cards if they don't fill the row */
+    margin-top: 30px;
+}
+
+/* Header */
+h1 {
+    background-color: #222; /* Darker header */
+    color: #fff;
+    margin: -20px -20px 20px -20px; /* Extend to edges */
+    padding: 20px 0;
+    text-align: center;
+    letter-spacing: 1px;
+    font-weight: 500;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* Section Headers */
+h2 {
+    color: #e0e0e0; /* Light text */
+    margin-top: 0; /* Reset margin as it's inside a card */
+    margin-bottom: 20px;
+    text-align: left; /* Align left within card */
+    font-weight: 500;
+    border-bottom: 1px solid #444; /* Subtle border */
+    padding-bottom: 10px;
+    display: flex; /* For icon alignment */
+    align-items: center; /* Vertically center icon and text */
+    gap: 8px; /* Space between icon and text */
+}
+
+h3 {
+    text-align: center;
+    color: #ccc; /* Lighter grey */
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+/* Containers & Cards */
+.card {
+    background: #3a3a3a; /* Dark card background */
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    padding: 25px;
+    margin: 0; /* Reset margin, handled by flex gap */
+    box-sizing: border-box;
+    flex: 1 1 300px; /* Flex properties: grow, shrink, basis */
+    min-width: 280px; /* Minimum width before wrapping */
+}
+
+/* Apply card style to specific elements */
+.sensor-card,
+.animal-card,
+.plant-card,
+.live-feed-card,
+.results-card {
+    background: #3a3a3a;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    padding: 25px;
+    margin-bottom: 20px; /* Space between stacked cards */
+    box-sizing: border-box;
+}
+
+/* Style for sections that were previously forms or lists */
+ul {
+    list-style: none;
+    padding-left: 0;
+    margin: 0; /* Reset margin */
+}
+
+li {
+    margin-bottom: 12px;
+    font-size: 1em; /* Slightly smaller */
+    border-bottom: 1px solid #4a4a4a; /* Darker border */
+    padding-bottom: 10px;
+    display: flex; /* For icon alignment */
+    align-items: center;
+    gap: 10px;
+}
+
+li:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+/* Forms & Buttons */
+form {
+    text-align: center;
+    margin: 0; /* Reset margin */
+    padding: 0; /* Reset padding */
+    background: none; /* Remove background */
+    box-shadow: none; /* Remove shadow */
+    border-radius: 0;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    text-align: left;
+    color: #ccc;
+}
+
+button {
+    background-color: #1abc9c; /* Teal color from image */
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: background-color 0.3s ease, transform 0.1s ease;
+    font-weight: 500;
+    width: 100%; /* Make buttons full width */
+    box-sizing: border-box;
+}
+
+button:hover {
+    background-color: #16a085; /* Darker teal */
+    transform: translateY(-1px);
+}
+
+button:active {
+    transform: translateY(0px);
+}
+
+input[type="file"] {
+    display: block;
+    margin: 10px 0 15px 0;
+    font-size: 0.95em;
+    padding: 8px 10px;
+    border-radius: 5px;
+    border: 1px solid #555;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #444; /* Dark input background */
+    color: #e0e0e0; /* Light text */
+}
+
+/* Style the file input button */
+input[type="file"]::file-selector-button {
+    background-color: #555;
+    color: #e0e0e0;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: background-color 0.2s ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+    background-color: #666;
+}
+
+input[type="text"] {
+    display: block;
+    margin: 10px 0 15px 0;
+    font-size: 1em;
+    padding: 10px 12px;
+    border-radius: 5px;
+    border: 1px solid #555;
+    width: 100%;
+    box-sizing: border-box;
+    background-color: #444; /* Dark input background */
+    color: #e0e0e0; /* Light text */
+}
+
+/* Notifications & Warnings */
+.notification,
+.warning {
+    padding: 15px 20px;
+    margin: 20px 0; /* Adjusted margin */
+    border-radius: 6px;
+    border-left: 5px solid;
+    font-weight: 500;
+    text-align: left;
+}
+
+.notification {
+    background-color: #5c3a3e; /* Darker red background */
+    color: #f8d7da; /* Lighter red text */
+    border-left-color: #dc3545;
+}
+
+.warning {
+    background-color: #665d40; /* Darker yellow background */
+    color: #fff3cd; /* Lighter yellow text */
+    border-left-color: #ffc107;
+}
+
+/* Images & Video */
+img,
+video {
+    display: block;
+    margin: 20px auto;
+    border-radius: 6px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+    max-width: 100%;
+    height: auto;
+    border: 1px solid #555; /* Add subtle border */
+}
+
+#liveFeedContainer p {
+    text-align: center;
+    font-weight: 500;
+    color: #ccc;
+    margin-bottom: 10px;
+}
+
+#liveFeed {
+    background-color: #444; /* Dark background for feed */
+}
+
+#videoPreview {
+    border: 1px solid #555;
+    display: none;
+    width: 100%; /* Make preview responsive */
+    max-width: 320px; /* Limit max size */
+}
+
+/* Code Blocks */
+pre {
+    background: #2a2a2a; /* Very dark background */
+    border: 1px solid #444;
+    border-radius: 6px;
+    padding: 15px;
+    font-size: 0.95em;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    color: #d0d0d0; /* Slightly dimmer text */
+    margin: 20px 0; /* Adjusted margin */
+}
+
+/* Feed Controls */
+#feedControls {
+    text-align: center;
+    background: #3a3a3a;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    padding: 25px;
+    margin-bottom: 20px;
+    box-sizing: border-box;
+}
+
+#status {
+    margin-top: 15px;
+    font-style: italic;
+    color: #aaa;
+    font-size: 0.95em;
+}
+
+/* Icons (using simple text characters for now) */
+.icon-temp::before { content: "🌡️ "; }
+.icon-humidity::before { content: "💧 "; }
+.icon-soil::before { content: "🌱 "; }
+.icon-sensors::before { content: "⚙️"; }
+.icon-animal::before { content: "🐾"; }
+.icon-plant::before { content: "🌿"; }
+.icon-live::before { content: "📷"; }
+.icon-results::before { content: "📊"; }
+.icon-gemini::before { content: "✨"; }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .main-container {
+        flex-direction: column; /* Stack cards vertically */
+    }
+
+    .card {
+        flex-basis: auto; /* Reset flex basis */
+        width: 100%; /* Make cards full width */
+    }
+
+    h1 {
+        font-size: 1.4em;
+        padding: 15px 0;
+    }
+
+    h2 {
+        font-size: 1.2em;
+    }
+
+    button {
+        padding: 12px 20px;
+    }
+}

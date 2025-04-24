@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>SmartAgro Raspberry Pi Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}"> <!-- Link to external CSS -->
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js" integrity="sha384-c79GN5Vf7AF07hW/kLh9U0f+XQ+p0/c/9z+9J/w/gXfP5f/j/g+" crossorigin="anonymous"></script>
+</head>
+<body>
+    <h1>SmartAgro Dashboard</h1>
+
+    {% if animal_intrusion %}
+        <div class="notification">
+            <span>⚠️ Animal intrusion detected! Buzzer activated. Please check the field.</span>
+        </div>
+    {% endif %}
+    {% if not (request.is_secure or request.host.startswith('localhost')) %}
+        <div class="warning">
+            <span>⚠️ Camera access requires HTTPS or localhost for the live feed feature.</span>
+        </div>
+    {% endif %}
+
+    <div class="main-container">
+        <!-- Sensor Readings Card -->
+        <div class="card sensor-card">
+            <h2 class="icon-sensors">Sensor Readings</h2>
+            <ul>
+                <li class="icon-temp">Temperature: {{ temperature }} °C</li>
+                <li class="icon-humidity">Humidity: {{ humidity }} %</li>
+                <li class="icon-soil">Soil Moisture: {{ 'Wet' if soil_wet else 'Dry' }}</li>
+            </ul>
+            <form method="POST" action="/sprinkler">
+                <button type="submit">Check Sprinkler (and Buzzer)</button>
+            </form>
+        </div>
+
+        <!-- Animal Detection Card -->
+        <div class="card animal-card">
+            <h2 class="icon-animal">Animal Detection</h2>
+            <form method="POST" action="/animal" enctype="multipart/form-data">
+                <label for="animal_image_upload">Upload Image:</label>
+                <input type="file" id="animal_image_upload" name="animal_image" accept="image/*">
+                <button type="submit">Detect Animal (Upload)</button>
+            </form>
+            <hr style="border-color: #444; margin: 25px 0;">
+        </div>
+
+        <!-- Plant Disease Classification Card -->
+        <div class="card plant-card">
+            <h2 class="icon-plant">Plant Disease Classification</h2>
+            <form method="POST" action="/plant" enctype="multipart/form-data">
+                <label for="plant_image_upload">Upload Plant Image:</label>
+                <input type="file" id="plant_image_upload" name="plant_image" accept="image/*" required>
+                <button type="submit">Classify Disease</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- ...existing code... -->
+
+    <!-- Automated Watering Toggle and Manual Water Button (AJAX version) -->
+    <div id="watering-controls" style="margin:20px 0;">
+        <label>
+            <input type="checkbox" id="autoWateringSwitch" {% if auto_watering_enabled %}checked{% endif %}>
+            <strong>Automated Watering</strong>
+        </label>
+        <span id="autoWateringStatus" style="font-weight:bold; color:{{ 'green' if auto_watering_enabled else 'red' }};">
+            ({{ 'Enabled' if auto_watering_enabled else 'Disabled' }})
+        </span>
+        <button id="manualWaterBtn" style="margin-left:20px;">Manual Water Prediction &amp; Action</button>
+    </div>
+    <div id="watering-message"></div>
+
+<script>
+// ...existing JS code...
+
+document.addEventListener('DOMContentLoaded', function() {
+    // ...existing code...
+
+    // --- Automated Watering AJAX ---
+    const autoWateringSwitch = document.getElementById('autoWateringSwitch');
+    const autoWateringStatus = document.getElementById('autoWateringStatus');
+    const manualWaterBtn = document.getElementById('manualWaterBtn');
+    const wateringMsgDiv = document.getElementById('watering-message');
+
+    if (autoWateringSwitch) {
+        autoWateringSwitch.addEventListener('change', function() {
+            fetch('{{ url_for("toggle_auto_watering") }}', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                autoWateringStatus.textContent = data.status_text;
+                autoWateringStatus.style.color = data.enabled ? 'green' : 'red';
+                wateringMsgDiv.innerHTML = `<div class="notification">${data.message}</div>`;
+            });
+        });
+    }
+
+    if (manualWaterBtn) {
+        manualWaterBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            fetch('{{ url_for("manual_water") }}', {
+                method: 'POST',
+                headers: {'X-Requested-With': 'XMLHttpRequest'}
+            })
+            .then(response => response.json())
+            .then(data => {
+                wateringMsgDiv.innerHTML = `<div class="notification">${data.message}</div>`;
+            });
+        });
+    }
+});
+</script>
+
+    <!-- ...existing code... -->
+
+    <!-- Results Section -->
+    <div class="results-card">
+        <h2 class="icon-results">Results</h2>
+        {% if animal_annotated %}
+            <h3>Annotated Animal Detection Result</h3>
+            <img src="{{ url_for('static', filename='annotated/' + animal_annotated) }}" alt="Annotated detection">
+            <p style="text-align:center;">Detection confidence: {{ animal_confidence|round(4) }}</p>
+        {% endif %}
+
+        {% if plant_result %}
+            <h3>Classification Result</h3>
+            <p style="text-align:center;">Disease: <strong>{{ plant_result[0] }}</strong> (Confidence: {{ plant_result[1]|round(4) }})</p>
+            <form method="POST" action="/qna" style="text-align:center;">
+                <input type="hidden" name="disease_name" value="{{ plant_result[0] }}">
+                <button type="submit">Ask Gemini about this disease</button>
+            </form>
+        {% endif %}
+
+        {% if gemini_answer_html %}
+            <h3 class="icon-gemini">Gemini Q&A:</h3>
+            <div class="gemini-content">
+                {{ gemini_answer_html | safe }} {# Render HTML safely #}
+            </div>
+        {% endif %}
+
+        {% if not animal_annotated and not plant_result and not gemini_answer_html %}
+            <p style="text-align:center; color: #aaa;">No results to display yet.</p>
+        {% endif %}
+    </div>
+
+    <!-- Weather Information Card -->
+    <div class="card weather-card">
+        <h2 class="icon-weather">Weather Information</h2>
+        {% if weather_data %}
+            <p>Location: {{ weather_data.location.name }}, {{ weather_data.location.country }}</p>
+            <p>Condition: {{ weather_data.current.condition.text }}</p>
+            <img src="https:{{ weather_data.current.condition.icon }}" alt="Weather Icon">
+            <p>Temperature: {{ weather_data.current.temp_c }} °C</p>
+            <p>Humidity: {{ weather_data.current.humidity }}%</p>
+        {% else %}
+            <p>Temperature: {{ temperature }} °C</p>
+            <p>Humidity: {{ humidity }}%</p>
+            {% if temperature == "N/A" or humidity == "N/A" %}
+                <p style="color: red;">Weather data not available. Check sensor and network/API settings.</p>
+            {% endif %}
+        {% endif %}
+    </div>
+
+    <!-- Webcam controls -->
+    <form action="{{ url_for('webcam_start') }}" method="post">
+      <button type="submit">Start Webcam</button>
+    </form>
+    <form action="{{ url_for('webcam_stop') }}" method="post">
+      <button type="submit">Stop Webcam</button>
+    </form>
+
+    <!-- Display latest annotated webcam image -->
+    {% if webcam_active and webcam_image_url %}
+      <div>
+        <h3>Webcam Feed (0.5 fps annotated):</h3>
+        <img src="{{ webcam_image_url }}" alt="Webcam Feed" />
+      </div>
+    {% endif %}
+
+    <!-- Show the CCTV feed -->
+    {% if cctv_active %}
+      <section id="cctv-section">
+        <h3>CCTV Feed</h3>
+        <img src="{{ url_for('cctv_latest') }}" alt="CCTV feed">
+      </section>
+    {% endif %}
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("SmartAgro Dashboard: DOM loaded.");
+
+    // DOM Elements
+    const video = document.getElementById('videoPreview');
+    const canvas = document.getElementById('canvas');
+    const context = canvas.getContext('2d');
+    const liveFeedImg = document.getElementById('liveFeed');
+    const startcctvButton = document.getElementById('startcctvButton');
+    const liveFeedContainer = document.getElementById('liveFeedContainer');
+    const statusDiv = document.getElementById('status');
+
+    const FPS = 0.5;
+    let streamInterval = null;
+    let localStream = null;
+    let isStreaming = false;
+
+    // Socket.IO Setup
+    console.log("Connecting to Socket.IO...");
+    const socket = io();
+
+    socket.on('connect', () => {
+        console.log('Socket.IO: Connected');
+        statusDiv.textContent = 'Connected. Feed stopped.';
+    });
+
+    socket.on('disconnect', () => {
+        console.log('Socket.IO: Disconnected');
+        statusDiv.textContent = 'Disconnected from server.';
+        stopStreaming();
+    });
+
+    socket.on('connect_error', (err) => {
+        console.error('Socket.IO: Connect error:', err);
+        statusDiv.textContent = `Socket.IO Error: ${err.message}`;
+    });
+
+    socket.on('cctv_annotated_frame', (dataUri) => {
+        liveFeedImg.src = dataUri;
+        liveFeedContainer.style.display = 'block';
+    });
+
+    // Button Handler
+    if (startcctvButton) {
+        startcctvButton.addEventListener('click', () => {
+            console.log(`Button clicked, isStreaming: ${isStreaming}`);
+            if (isStreaming) {
+                stopStreaming();
+            } else {
+                startStreaming();
+            }
+        });
+    } else {
+        console.error('Start/Stop button not found');
+        statusDiv.textContent = 'UI Error: Button not found';
+    }
+
+    async function checkCameraPermission() {
+        if (!navigator.permissions || !navigator.permissions.query) {
+            console.log('Permissions API not supported');
+            return 'unknown';
+        }
+        try {
+            const result = await navigator.permissions.query({ name: 'camera' });
+            console.log(`Camera permission state: ${result.state}`);
+            return result.state; // 'granted', 'denied', or 'prompt'
+        } catch (err) {
+            console.error('Error checking camera permission:', err);
+            return 'error';
+        }
+    }
+
+    async function startStreaming() {
+        console.log("Starting camera stream...");
+        statusDiv.textContent = 'Checking camera access...';
+
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            console.error('getUserMedia not supported');
+            statusDiv.textContent = 'Error: Camera not supported';
+            alert('Camera access is not supported in this browser. Try Chrome, Firefox, or Safari.');
+            return;
+        }
+
+        // Check permission state
+        const permission = await checkCameraPermission();
+        if (permission === 'denied') {
+            console.error('Camera permission denied');
+            statusDiv.textContent = 'Error: Camera permission denied';
+            alert('Camera access is denied. Please enable camera permissions in your browser settings.');
+            return;
+        }
+
+        // Minimal constraints to maximize compatibility
+        const constraints = {
+            video: {
+                width: { ideal: 640 },
+                height: { ideal: 480 }
+            }
+        };
+        console.log('Requesting camera with constraints:', constraints);
+
+        // Timeout to detect silent failures
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Camera access timed out')), 5000);
+        });
+
+        try {
+            localStream = await Promise.race([
+                navigator.mediaDevices.getUserMedia(constraints),
+                timeoutPromise
+            ]);
+            console.log('Camera stream acquired');
+
+            // Bind stream to video element
+            video.srcObject = localStream;
+            video.style.display = 'block';
+            isStreaming = true;
+            startcctvButton.textContent = 'Stop cctv Feed';
+            statusDiv.textContent = 'Streaming from camera...';
+
+            // Ensure video is playing
+            video.play().catch(err => {
+                console.error('Error playing video:', err);
+                statusDiv.textContent = 'Error: Cannot play video stream';
+                stopStreaming();
+            });
+
+            video.onloadedmetadata = () => {
+                console.log('Video metadata loaded');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                console.log(`Canvas size: ${canvas.width}x${canvas.height}`);
+
+                if (streamInterval) {
+                    clearInterval(streamInterval);
+                    console.log('Cleared previous interval');
+                }
+
+                streamInterval = setInterval(() => {
+                    if (video.readyState >= video.HAVE_CURRENT_DATA) {
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        const dataUri = canvas.toDataURL('image/jpeg', 0.7);
+                        socket.emit('cctv_frame', dataUri);
+                    }
+                }, 1000 / FPS);
+                console.log(`Streaming started at ${FPS} FPS`);
+            };
+
+            video.onerror = (e) => {
+                console.error('Video error:', e);
+                statusDiv.textContent = 'Error: Video stream failed';
+                stopStreaming();
+            };
+
+        } catch (err) {
+            console.error('Camera access failed:', err);
+            let errorMsg = `Camera error: ${err.message}`;
+            if (err.name === 'NotAllowedError') {
+                errorMsg = 'Camera permission denied';
+            } else if (err.name === 'NotFoundError') {
+                errorMsg = 'No camera found';
+            } else if (err.name === 'NotReadableError') {
+                errorMsg = 'Camera already in use';
+            } else if (err.message.includes('timed out')) {
+                errorMsg = 'Camera access timed out';
+            }
+            statusDiv.textContent = errorMsg;
+            alert(`${errorMsg}\n\nPlease ensure camera permissions are granted and the camera is available.`);
+            stopStreaming();
+        }
+    }
+
+    function stopStreaming() {
+        console.log("Stopping stream...");
+        if (streamInterval) {
+            clearInterval(streamInterval);
+            streamInterval = null;
+            console.log('Stream interval stopped');
+        }
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                track.stop();
+                console.log(`Stopped track: ${track.kind}`);
+            });
+            localStream = null;
+            console.log('All tracks stopped');
+        }
+        video.srcObject = null;
+        video.style.display = 'none';
+        isStreaming = false;
+        startcctvButton.textContent = 'Start CCTV Feed';
+        liveFeedContainer.style.display = 'none';
+        console.log('Stream fully stopped');
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', stopStreaming);
+
+    // HTTPS check
+    if (window.location.protocol !== 'https:' && !window.location.hostname.includes('localhost')) {
+        console.warn('Non-HTTPS connection detected; camera may fail');
+        statusDiv.textContent = 'Warning: Camera requires HTTPS';
+    }
+});
+</script>
+</body>
+</html>

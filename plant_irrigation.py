@@ -6,36 +6,30 @@ import joblib
 import sys
 import argparse
 import time
-import requests # Added import for live API call
+import requests
 
-# --- Configuration ---
-# Reusing relevant configurations from simulation
+# Configuration settings
 WEATHER_DB_PATH = 'weather_data.db'
 MODEL_PATH = 'weather_xgboost_best_model.joblib'
 SCALER_PATH = 'weather_xgboost_scaler.joblib'
 WATER_THRESHOLD_PRECIP = 0.5
 SOIL_DRY_THRESHOLD = 40
 WEATHER_FEATURE_COLUMNS = ['temp', 'humidity', 'pressure', 'wind_speed']
-# Add API configuration needed for live forecast
-# Replace with your actual API key and location
-LIVE_API_KEY = "YOUR_WEATHERAPI_KEY" # IMPORTANT: Replace with your key
-LIVE_API_LAT = 40.7128 # Example: New York Latitude
-LIVE_API_LON = -74.0060 # Example: New York Longitude
-LIVE_API_FORECAST_URL = "http://api.weatherapi.com/v1/forecast.json"
-# --- End Configuration ---
 
-# --- Sensor Reading (Placeholder) ---
+# API configuration (replace with actual values)
+LIVE_API_KEY = "YOUR_WEATHERAPI_KEY"  # Replace with your API key
+LIVE_API_LAT = 40.7128  # Example: New York Latitude
+LIVE_API_LON = -74.0060  # Example: New York Longitude
+LIVE_API_FORECAST_URL = "http://api.weatherapi.com/v1/forecast.json"
+
 def get_current_soil_moisture():
-    """Placeholder function to simulate reading soil moisture sensor."""
-    # In a real scenario, this would interact with hardware.
-    # Simulate fluctuating moisture for testing
-    simulated_moisture = np.random.uniform(30, 60) # Random value between 30% and 60%
-    print(f"(Placeholder) Current Soil Moisture: {simulated_moisture:.2f}%")
+    """Simulate reading soil moisture sensor (placeholder function)."""
+    simulated_moisture = np.random.uniform(30, 60)
+    print(f"Current Soil Moisture: {simulated_moisture:.2f}%")
     return simulated_moisture
 
-# --- Get Weather Forecast for Prediction ---
 def get_weather_forecast_for_prediction(db_path):
-    """Fetches the most recent forecast data matching the model features from the DB."""
+    """Fetch most recent forecast data from database for model prediction."""
     if not os.path.exists(db_path):
         print(f"Error: Weather database {db_path} not found.")
         return None
@@ -47,8 +41,8 @@ def get_weather_forecast_for_prediction(db_path):
         cursor.execute(query)
         row = cursor.fetchone()
         if row:
-            processed_row = [0.0 if v is None else v for v in row] # Replace None with 0.0
-            return np.array([processed_row], dtype=np.float32)  # Return as a 2D array
+            processed_row = [0.0 if v is None else v for v in row]
+            return np.array([processed_row], dtype=np.float32)
         else:
             print("No forecast data found in weather database.")
             return None
@@ -61,17 +55,16 @@ def get_weather_forecast_for_prediction(db_path):
     finally:
         conn.close()
 
-# --- Get Live Weather Forecast from API ---
 def get_live_api_forecast(api_key, lat, lon, forecast_url):
-    """Fetches live precipitation forecast for today from WeatherAPI."""
+    """Fetch live precipitation forecast for today from WeatherAPI."""
     params = {
         'key': api_key,
         'q': f"{lat},{lon}",
-        'days': 1 # Forecast for today
+        'days': 1
     }
     try:
-        response = requests.get(forecast_url, params=params, timeout=10) # Added timeout
-        response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+        response = requests.get(forecast_url, params=params, timeout=10)
+        response.raise_for_status()
         data = response.json()
 
         if 'forecast' in data and 'forecastday' in data['forecast'] and len(data['forecast']['forecastday']) > 0:
@@ -95,8 +88,6 @@ def get_live_api_forecast(api_key, lat, lon, forecast_url):
     except (KeyError, ValueError, TypeError) as e:
         print(f"Error parsing live API forecast data: {e}")
         return None
-
-# --- Get Actual Weather for Feedback (Optional for single run, kept for context) ---
 def get_actual_weather_for_date(db_path, target_date):
     """Fetches the actual (or most accurate available) weather data for a specific date."""
     if not os.path.exists(db_path):
@@ -123,7 +114,6 @@ def get_actual_weather_for_date(db_path, target_date):
     finally:
         conn.close()
 
-# --- Predict Precipitation using Trained Model ---
 def predict_precipitation_from_db_forecast(db_forecast_input):
     """Predicts precipitation using the trained model and DB forecast input."""
     if db_forecast_input is None:
@@ -147,14 +137,13 @@ def predict_precipitation_from_db_forecast(db_forecast_input):
     try:
         X_scaled = scaler.transform(db_forecast_input)
         predicted_precip = model.predict(X_scaled)[0]
-        predicted_precip = max(0, predicted_precip) # Ensure non-negative prediction
+        predicted_precip = max(0, predicted_precip)
         print(f"Model Prediction (from DB forecast): Precipitation today = {predicted_precip:.2f} mm")
         return predicted_precip
     except Exception as e:
         print(f"Error during model prediction: {e}")
         return None
 
-# --- Make Watering Decision ---
 def make_watering_decision(current_soil_moisture, predicted_precip):
     """
     Makes a watering decision based on current soil moisture and predicted precipitation.

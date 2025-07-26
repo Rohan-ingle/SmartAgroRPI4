@@ -2,8 +2,7 @@ import os
 import io
 import time
 import threading
-import markdown # Import the markdown library
-# Use session to store results across requests
+import markdown
 from flask import Flask, render_template, request, redirect, url_for, send_file, jsonify, session, send_from_directory, flash
 from flask_socketio import SocketIO, emit
 from werkzeug.utils import secure_filename
@@ -15,13 +14,13 @@ import random
 import sqlite3
 import subprocess
 from datetime import datetime, date
-from dotenv import load_dotenv  # Add this import
+from dotenv import load_dotenv
 
-# --- Load environment variables from .env file ---
-load_dotenv()  # This will load variables from .env into os.environ
+# Load environment variables from .env file
+load_dotenv()
 
-WEATHER_DB_PATH = "data/weather_data.db"         # For local DHT11 data
-WEATHERAPI_DB_PATH = "data/weatherapi_data.db"   # For WeatherAPI.com data
+WEATHER_DB_PATH = "data/weather_data.db"
+WEATHERAPI_DB_PATH = "data/weatherapi_data.db"
 WEATHER_TABLE = "weather_forecast"
 WEATHERAPI_TABLE = "weatherapi_forecast"
 
@@ -30,7 +29,8 @@ AUTO_WATERING_KEY = "auto_watering_enabled"
 
 UPLOAD_FOLDER = "static/uploads"
 ANNOTATED_FOLDER = "static/annotated"
-# --- Flask App & SocketIO ---
+
+# Flask App & SocketIO initialization
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['ANNOTATED_FOLDER'] = ANNOTATED_FOLDER
@@ -40,10 +40,10 @@ socketio = SocketIO(app, async_mode='threading')
 def predict_and_water():
     """Predict if watering is needed and water if required."""
     soil_wet = read_soil_moisture()
-    # If soil is wet, do not water
     if soil_wet:
         print("Soil is wet. No need to water.")
         return False
+    
     # Predict precipitation using the trained model
     try:
         import joblib
@@ -54,10 +54,10 @@ def predict_and_water():
             return False
         scaler = joblib.load(SCALER_PATH)
         model = joblib.load(MODEL_PATH)
-        # Fetch latest weather features from DB
+        
+        # Fetch latest weather features from database
         conn = sqlite3.connect(WEATHER_DB_PATH)
         cursor = conn.cursor()
-        # Adjust columns as per your model's features
         feature_cols = ['temp', 'humidity']
         cursor.execute(f"SELECT {', '.join(feature_cols)} FROM {WEATHER_TABLE} ORDER BY id DESC LIMIT 1")
         row = cursor.fetchone()
@@ -69,8 +69,9 @@ def predict_and_water():
         X_scaled = scaler.transform(X)
         predicted_precip = model.predict(X_scaled)[0]
         print(f"Predicted precipitation: {predicted_precip:.2f} mm")
+        
         # If predicted precipitation is low, water the plants
-        if predicted_precip < 1.0:  # Threshold, adjust as needed
+        if predicted_precip < 1.0:
             print("Need to water. Watering plants (activating buzzer).")
             threading.Thread(target=activate_buzzer, args=(BUZZER_SPRINKLER_PIN,)).start()
             return True
@@ -82,17 +83,17 @@ def predict_and_water():
         return False
 
 def auto_watering_worker():
-    """Background thread: run prediction and watering twice daily if enabled."""
+    """Background thread that runs prediction and watering twice daily if enabled."""
     last_run = None
     while True:
         now = datetime.now()
-        # --- FIX: Use a global variable for auto-watering state, not session ---
         enabled = False
         try:
             with app.app_context():
                 enabled = app.config.get("AUTO_WATERING_ENABLED", False)
         except Exception:
             enabled = False
+        
         # If enabled, run at 6am and 6pm
         if enabled:
             if last_run != now.date() or (now.hour in [6, 18] and (last_run is None or last_run != (now.date(), now.hour))):
@@ -103,7 +104,7 @@ def auto_watering_worker():
 
 @app.route("/toggle_auto_watering", methods=["POST"])
 def toggle_auto_watering():
-    # --- FIX: Store state in app.config for background thread access ---
+    """Toggle automated watering system on/off."""
     enabled = app.config.get("AUTO_WATERING_ENABLED", False)
     app.config["AUTO_WATERING_ENABLED"] = not enabled
     msg = f"Automated watering {'enabled' if not enabled else 'disabled'}."
@@ -119,6 +120,7 @@ def toggle_auto_watering():
 
 @app.route("/manual_water", methods=["POST"])
 def manual_water():
+    """Trigger manual watering."""
     watered = predict_and_water()
     msg = "Manual watering triggered." if watered else "No need to water (soil wet or rain predicted)."
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -133,11 +135,9 @@ def ensure_weather_table(db_path, table, columns):
     cursor.execute(f"PRAGMA table_info({table})")
     existing_cols = [row[1] for row in cursor.fetchall()]
     if not existing_cols:
-        # Table does not exist, create it
         col_defs = ", ".join([f"{col} {typ}" for col, typ in columns])
         cursor.execute(f"CREATE TABLE IF NOT EXISTS {table} (id INTEGER PRIMARY KEY AUTOINCREMENT, {col_defs})")
     else:
-        # Table exists, add missing columns
         for col, typ in columns:
             if col not in existing_cols:
                 try:
@@ -243,7 +243,7 @@ UPLOAD_FOLDER = 'static/uploads'
 ANNOTATED_FOLDER = 'static/annotated'
 WEATHER_API_KEY = os.environ.get('WEATHERAPI_KEY')
 WEATHER_API_URL = 'https://api.weatherapi.com/v1/current.json'
-WEATHER_LOCATION = 'Pune'
+WEATHER_LOCATION = os.environ.get('WEATHER_LOCATION')
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 os.makedirs(ANNOTATED_FOLDER, exist_ok=True)
 

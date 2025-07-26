@@ -54,6 +54,10 @@ GEMINI_API_KEY=your_gemini_api_key_here
 cd SMARTAGRORPI4
 python app.py
 ```
+## UI
+
+The UI will be available at ipaddr:5000 where ipaddr is the ip of the host machine
+
 
 ----
 
